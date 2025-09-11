@@ -1,3 +1,4 @@
+
 import streamlit as st
 import fastf1
 import pandas as pd
@@ -88,7 +89,7 @@ def apply_performance_factors(predictions_df):
     }
     for idx, row in predictions_df.iterrows():
         adj = team_adjustments.get(row['Team'], 0.5) + driver_adjustments.get(row['Driver'], 0.2)
-        predictions_df.loc[idx, 'Predicted_Q3'] = row['Predicted_Q3_Model'] + adj + np.random.uniform(-0.05,0.05)
+        predictions_df.loc[idx, 'Predicted_Q3'] = row['Predicted_Q3_Model'] + adj + np.random.uniform(-0.05, 0.05)
     return predictions_df
 
 
@@ -103,7 +104,7 @@ combined_df = pd.concat(all_data, ignore_index=True)
 combined_df = calculate_driver_form(combined_df)
 combined_df = clean_data(combined_df)
 
-features = ['Q1_sec','Q2_sec','AirTemp','TrackTemp','Humidity','WindSpeed','Driver_Form']
+features = ['Q1_sec', 'Q2_sec', 'AirTemp', 'TrackTemp', 'Humidity', 'WindSpeed', 'Driver_Form']
 target = 'Q3_sec'
 
 valid_data = combined_df.dropna(subset=[target])
@@ -160,22 +161,22 @@ page_bg = """
 
 st.markdown(page_bg, unsafe_allow_html=True)
 
-st.title("🏎️ F1 2025 Qualifying Prediction Model")
+st.title("F1 2025 Qualifying Prediction Model")
 
 
 # -------------------------
 # Japanese GP 2025 Predictions
 # -------------------------
 driver_teams_2025 = {
-    'Max Verstappen':'Red Bull Racing','Sergio Perez':'Red Bull Racing','Charles Leclerc':'Ferrari',
-    'Carlos Sainz':'Ferrari','Lewis Hamilton':'Mercedes','George Russell':'Mercedes','Lando Norris':'McLaren',
-    'Oscar Piastri':'McLaren','Fernando Alonso':'Aston Martin','Lance Stroll':'Aston Martin',
-    'Daniel Ricciardo':'RB','Yuki Tsunoda':'RB','Alexander Albon':'Williams','Logan Sargeant':'Williams',
-    'Valtteri Bottas':'Kick Sauber','Zhou Guanyu':'Kick Sauber','Kevin Magnussen':'Haas F1 Team',
-    'Nico Hulkenberg':'Haas F1 Team','Pierre Gasly':'Alpine','Esteban Ocon':'Alpine'
+    'Max Verstappen': 'Red Bull Racing', 'Sergio Perez': 'Red Bull Racing', 'Charles Leclerc': 'Ferrari',
+    'Carlos Sainz': 'Ferrari', 'Lewis Hamilton': 'Mercedes', 'George Russell': 'Mercedes', 'Lando Norris': 'McLaren',
+    'Oscar Piastri': 'McLaren', 'Fernando Alonso': 'Aston Martin', 'Lance Stroll': 'Aston Martin',
+    'Daniel Ricciardo': 'RB', 'Yuki Tsunoda': 'RB', 'Alexander Albon': 'Williams', 'Logan Sargeant': 'Williams',
+    'Valtteri Bottas': 'Kick Sauber', 'Zhou Guanyu': 'Kick Sauber', 'Kevin Magnussen': 'Haas F1 Team',
+    'Nico Hulkenberg': 'Haas F1 Team', 'Pierre Gasly': 'Alpine', 'Esteban Ocon': 'Alpine'
 }
 
-jgp_df = pd.DataFrame(list(driver_teams_2025.items()), columns=['Driver','Team'])
+jgp_df = pd.DataFrame(list(driver_teams_2025.items()), columns=['Driver', 'Team'])
 
 # Weather inputs in sidebar
 st.sidebar.header("Weather Inputs")
@@ -204,17 +205,14 @@ jgp_df = apply_performance_factors(jgp_df)
 
 # Ranking by predicted lap times
 
-results_df = jgp_df[['Driver','Team','Predicted_Q3']].sort_values('Predicted_Q3').reset_index(drop=True)
+results_df = jgp_df[['Driver', 'Team', 'Predicted_Q3']].sort_values('Predicted_Q3').reset_index(drop=True)
 results_df.index += 1
 results_df = results_df.rename_axis("Predicted_Position").reset_index()
-st.subheader("📊 Predicted Qualifying Order (Lower = Faster)")
-fig, ax = plt.subplots(figsize=(10,6))
+st.subheader("Predicted Qualifying Order (Lower = Faster)")
+fig, ax = plt.subplots(figsize=(10, 6))
 ax.barh(results_df['Driver'], results_df['Predicted_Q3'], color="red")
 ax.invert_yaxis()
 ax.set_xlabel("Predicted Q3 Lap Time (s)")
 ax.set_ylabel("Driver")
 ax.set_title("Japanese GP 2025 - Predicted Qualifying")
 st.pyplot(fig)
-
-
-
