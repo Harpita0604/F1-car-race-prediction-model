@@ -2,6 +2,7 @@ import streamlit as st
 import fastf1
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
@@ -11,9 +12,7 @@ from sklearn.model_selection import GridSearchCV
 
 st.title("F1 2025 Qualifying Prediction Model")
 
-# -------------------------
-# Functions
-# -------------------------
+
 def fetch_f1_data(year, round_number):
     try:
         quali = fastf1.get_session(year, round_number, 'Q')
@@ -92,9 +91,9 @@ def apply_performance_factors(predictions_df):
         predictions_df.loc[idx, 'Predicted_Q3'] = row['Predicted_Q3_Model'] + adj + np.random.uniform(-0.05,0.05)
     return predictions_df
 
-# -------------------------
-# Fetch and prepare data
-# -------------------------
+
+# prepare data
+
 all_data = fetch_recent_data()
 if not all_data:
     st.error("Failed to fetch F1 data")
@@ -116,24 +115,18 @@ X_clean = pd.DataFrame(imputer.fit_transform(X), columns=X.columns)
 
 X_train, X_test, y_train, y_test = train_test_split(X_clean, y, test_size=0.2, random_state=42)
 
-# -------------------------
 # Train models
-# -------------------------
+
 lr_model = LinearRegression()
 lr_model.fit(X_train, y_train)
-
 ridge_model = Ridge()
 ridge_model.fit(X_train, y_train)
-
 lasso_model = Lasso()
 lasso_model.fit(X_train, y_train)
-
 rf_model = RandomForestRegressor(random_state=42)
 rf_model.fit(X_train, y_train)
-
 gb_model = GradientBoostingRegressor(random_state=42)
 gb_model.fit(X_train, y_train)
-
 models = {
     "Linear Regression": lr_model,
     "Ridge": ridge_model,
@@ -148,6 +141,27 @@ for name, m in models.items():
     mae = mean_absolute_error(y_test, y_pred)
     r2 = r2_score(y_test, y_pred)
     st.write(f"{name} - MAE: {mae:.2f}s, R2: {r2:.2f}")
+st.set_page_config(page_title="F1 Qualifying Predictor", layout="wide")
+page_bg = """
+<style>
+[data-testid="stAppViewContainer"] {
+    background-image: url("https://wallpaperaccess.com/full/3064023.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+[data-testid="stHeader"] {
+    background: rgba(0,0,0,0);
+}
+[data-testid="stSidebar"] {
+    background: rgba(255,255,255,0.8);
+}
+</style>"""
+
+st.markdown(page_bg, unsafe_allow_html=True)
+
+st.title("🏎️ F1 2025 Qualifying Prediction Model")
+
 
 # -------------------------
 # Japanese GP 2025 Predictions
@@ -170,6 +184,7 @@ jgp_df['TrackTemp'] = st.sidebar.number_input("Track Temperature", value=combine
 jgp_df['Humidity'] = st.sidebar.number_input("Humidity", value=combined_df['Humidity'].mean())
 jgp_df['WindSpeed'] = st.sidebar.number_input("Wind Speed", value=combined_df['WindSpeed'].mean())
 
+# Driver performance history (Q1, Q2, Q3 averages)
 driver_avg_q3 = combined_df.groupby('Driver')['Q3_sec'].mean().to_dict()
 jgp_df['Driver_Form'] = jgp_df['Driver'].map(driver_avg_q3).fillna(combined_df['Q3_sec'].mean())
 
@@ -178,6 +193,7 @@ driver_avg_q2 = combined_df.groupby('Driver')['Q2_sec'].mean().to_dict()
 jgp_df['Q1_sec'] = jgp_df['Driver'].map(driver_avg_q1).fillna(combined_df['Q1_sec'].mean())
 jgp_df['Q2_sec'] = jgp_df['Driver'].map(driver_avg_q2).fillna(combined_df['Q2_sec'].mean())
 
+# Clean and predict
 X_predict = jgp_df[features]
 X_predict_clean = pd.DataFrame(imputer.transform(X_predict), columns=features)
 
@@ -185,8 +201,20 @@ chosen_model = gb_model
 jgp_df['Predicted_Q3_Model'] = chosen_model.predict(X_predict_clean)
 jgp_df = apply_performance_factors(jgp_df)
 
+
+# Ranking by predicted lap times
+
 results_df = jgp_df[['Driver','Team','Predicted_Q3']].sort_values('Predicted_Q3').reset_index(drop=True)
 results_df.index += 1
+results_df = results_df.rename_axis("Predicted_Position").reset_index()
+st.subheader("📊 Predicted Qualifying Order (Lower = Faster)")
+fig, ax = plt.subplots(figsize=(10,6))
+ax.barh(results_df['Driver'], results_df['Predicted_Q3'], color="red")
+ax.invert_yaxis()
+ax.set_xlabel("Predicted Q3 Lap Time (s)")
+ax.set_ylabel("Driver")
+ax.set_title("Japanese GP 2025 - Predicted Qualifying")
+st.pyplot(fig)
 
-st.subheader("Japanese GP 2025 Qualifying Predictions (Adjusted)")
-st.dataframe(results_df)
+
+
